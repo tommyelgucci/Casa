@@ -1,6 +1,6 @@
 import streamlit as st, yaml, pandas as pd
 from pathlib import Path
-from database.db import init_db, upsert, all_items, price_history
+from database.db import init_db, upsert, all_items, price_history, auction_history
 from collectors.eldeber import collect as collect_eldeber
 from collectors.bcp import collect as collect_bcp
 from analysis.filters import classify
@@ -41,6 +41,19 @@ def card(x, auction=False):
             cols[3].metric("Matrícula",x.get("registry") or "—")
             if x.get("court"): st.caption(f"⚖️ Juzgado: {x['court']}")
             if x.get("auction_date"): st.caption(f"📅 {x['auction_date']}")
+            history=auction_history(x.get("registry"))
+            if len(history)>1:
+                st.markdown("#### 🔨 Historial conocido de esta matrícula")
+                first_usd=next((h.get("price_usd") for h in history if h.get("price_usd")),None)
+                for h in history:
+                    n=f"Remate {h['auction_number']}" if h.get("auction_number") else "Evento"
+                    p=(f"$us {h['price_usd']:,.2f}" if h.get("price_usd") else
+                       f"Bs {h['price_bob']:,.2f}" if h.get("price_bob") else "precio no detectado")
+                    delta=""
+                    if first_usd and h.get("price_usd") and h["price_usd"]!=first_usd:
+                        delta=f" · {(h['price_usd']-first_usd)/first_usd*100:+.1f}% vs. primer evento conocido"
+                    st.write(f"**{n}** · {p}{delta} · {h.get('auction_date') or 'fecha por revisar'}")
+                st.caption("Sólo se muestran eventos encontrados. Radar no supone que exista un remate intermedio ni predice futuras rebajas.")
         else:
             cols[2].metric("Categoría",cat.title())
             cols[3].metric("Detectado",str(x.get("first_seen",""))[:10] or "—")
