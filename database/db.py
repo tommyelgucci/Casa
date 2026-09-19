@@ -14,6 +14,10 @@ def init_db():
           registry TEXT, cadastral_code TEXT, auction_number INTEGER, ownership_percent REAL,
           court TEXT, auction_date TEXT, first_seen TEXT NOT NULL, last_seen TEXT NOT NULL,
           raw_text TEXT, UNIQUE(source,url));
+        CREATE TABLE IF NOT EXISTS user_marks (
+          item_id INTEGER PRIMARY KEY, favorite INTEGER NOT NULL DEFAULT 0,
+          watching INTEGER NOT NULL DEFAULT 0, notes TEXT,
+          updated_at TEXT NOT NULL, FOREIGN KEY(item_id) REFERENCES items(id));
         CREATE TABLE IF NOT EXISTS verification_checks (
           id INTEGER PRIMARY KEY, item_id INTEGER NOT NULL, check_type TEXT NOT NULL,
           status TEXT NOT NULL DEFAULT 'desconocido', notes TEXT, checked_at TEXT,
@@ -86,3 +90,23 @@ def verification_status(item_id):
     if "alerta" in states: return "alerta"
     verified=sum(s=="verificado" for s in states)
     return "verificado" if verified==len(states) else "parcial" if verified else "desconocido"
+
+
+def get_mark(item_id):
+    with connect() as con:
+        r=con.execute("SELECT * FROM user_marks WHERE item_id=?",(item_id,)).fetchone()
+    return dict(r) if r else {"item_id":item_id,"favorite":0,"watching":0,"notes":""}
+
+def save_mark(item_id,favorite=False,watching=False,notes=""):
+    now=datetime.now(timezone.utc).isoformat()
+    with connect() as con:
+        con.execute("""INSERT INTO user_marks(item_id,favorite,watching,notes,updated_at)
+        VALUES(?,?,?,?,?) ON CONFLICT(item_id) DO UPDATE SET
+        favorite=excluded.favorite,watching=excluded.watching,notes=excluded.notes,updated_at=excluded.updated_at""",
+        (item_id,int(bool(favorite)),int(bool(watching)),notes,now))
+
+def marked_items(mode="favorite"):
+    column="favorite" if mode=="favorite" else "watching"
+    with connect() as con:
+        return [dict(r) for r in con.execute(f"""SELECT i.*,m.favorite,m.watching,m.notes
+        FROM items i JOIN user_marks m ON i.id=m.item_id WHERE m.{column}=1 ORDER BY m.updated_at DESC""")]
