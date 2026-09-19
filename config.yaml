@@ -1,0 +1,28 @@
+busqueda:
+  tipos: [terreno, casa]
+  superficie_objetivo_min_m2: 500
+  superficie_excepcion_min_m2: 400
+  precio_max_usd: 20000
+  precio_max_bob: 200000
+  precio_negociable_usd: 25000
+  precio_negociable_bob: 250000
+  antiguedad_max_dias: 90
+zonas:
+  incluir: [santa_cruz_de_la_sierra, urubo, porongo, warnes]
+  prioridad:
+    equipetrol: 10
+    av_beni: 9
+    av_banzer: 9
+    zona_norte: 8
+    urubo: 8
+    porongo: 6
+    warnes: 4
+moneda:
+  usd_bob: 7.0
+remates:
+  porcentaje_propiedad_minimo: 100
+  permitir_copropiedad: false
+  conservar_historial: true
+analisis_mercado:
+  comparables_minimos: 5
+  usar_mediana: true
