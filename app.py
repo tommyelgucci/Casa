@@ -5,6 +5,7 @@ from collectors.eldeber import collect as collect_eldeber
 from collectors.bcp import collect as collect_bcp
 from analysis.filters import classify
 from analysis.events import events_for
+from analysis.ranking import opportunity_score
 
 ROOT=Path(__file__).parent
 cfg=yaml.safe_load((ROOT/"config.yaml").read_text(encoding="utf-8"))
@@ -23,6 +24,16 @@ def card(x, auction=False):
     cat=x.get("categoria","fuera")
     labels={"principal":"🔥 CUMPLE","excepcion":"⚡ EXCEPCIÓN 400–499 m²","negociable":"👀 NEGOCIABLE","fuera":"📌 FUERA DE CRITERIO"}
     with st.container(border=True):
+        score=opportunity_score(x,cfg,rows)
+        st.markdown(f"### 🎯 Opportunity Score: {score['total']}/100")
+        with st.expander("¿Cómo se calculó?"):
+            st.write("Este puntaje mide ajuste económico a tus criterios; no mide seguridad jurídica.")
+            st.json(score["parts"])
+            if score["median_ppm"]:
+                st.write(f"Mediana comparable: $us {score['median_ppm']:.2f}/m² · {score['comparables']} comparables")
+                st.write(f"Diferencia frente a mediana: {score['discount_pct']:+.1f}%")
+            else:
+                st.write(f"Referencia de zona: datos insuficientes ({score['comparables']} comparables; se requieren {cfg['analisis_mercado']['comparables_minimos']}).")
         for event in events_for(x,cfg):
             st.markdown(f"**{event['text']}**")
         a,b,c=st.columns([5,2,2])
