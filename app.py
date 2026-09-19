@@ -4,6 +4,7 @@ from database.db import init_db, upsert, all_items, price_history
 from collectors.eldeber import collect as collect_eldeber
 from collectors.bcp import collect as collect_bcp
 from analysis.filters import classify
+from analysis.events import events_for
 
 ROOT=Path(__file__).parent
 cfg=yaml.safe_load((ROOT/"config.yaml").read_text(encoding="utf-8"))
@@ -22,6 +23,8 @@ def card(x, auction=False):
     cat=x.get("categoria","fuera")
     labels={"principal":"🔥 CUMPLE","excepcion":"⚡ EXCEPCIÓN 400–499 m²","negociable":"👀 NEGOCIABLE","fuera":"📌 FUERA DE CRITERIO"}
     with st.container(border=True):
+        for event in events_for(x,cfg):
+            st.markdown(f"**{event['text']}**")
         a,b,c=st.columns([5,2,2])
         with a:
             st.subheader(x.get("title") or ("Remate BCP" if auction else "Propiedad"))
