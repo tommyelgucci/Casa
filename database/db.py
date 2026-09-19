@@ -14,6 +14,10 @@ def init_db():
           registry TEXT, cadastral_code TEXT, auction_number INTEGER, ownership_percent REAL,
           court TEXT, auction_date TEXT, first_seen TEXT NOT NULL, last_seen TEXT NOT NULL,
           raw_text TEXT, UNIQUE(source,url));
+        CREATE TABLE IF NOT EXISTS verification_checks (
+          id INTEGER PRIMARY KEY, item_id INTEGER NOT NULL, check_type TEXT NOT NULL,
+          status TEXT NOT NULL DEFAULT 'desconocido', notes TEXT, checked_at TEXT,
+          UNIQUE(item_id,check_type), FOREIGN KEY(item_id) REFERENCES items(id));
         CREATE TABLE IF NOT EXISTS price_history (
           id INTEGER PRIMARY KEY, item_id INTEGER NOT NULL, observed_at TEXT NOT NULL,
           price REAL, currency TEXT, price_usd REAL, price_bob REAL,
@@ -59,3 +63,26 @@ def auction_history(registry):
           FROM items WHERE kind='remate' AND registry=?
           ORDER BY COALESCE(auction_number,0), COALESCE(auction_date,first_seen)""",(registry,)).fetchall()
         return [dict(r) for r in rows]
+
+
+VERIFICATION_TYPES=["folio_real","gravamenes","impuestos_municipales","ocupacion","litigios_adicionales","propiedad_100","plano_catastro","visita_fisica"]
+
+def verification_checks(item_id):
+    with connect() as con:
+        existing={r["check_type"]:dict(r) for r in con.execute("SELECT * FROM verification_checks WHERE item_id=?",(item_id,))}
+    return [{"check_type":t,"status":existing.get(t,{}).get("status","desconocido"),"notes":existing.get(t,{}).get("notes")} for t in VERIFICATION_TYPES]
+
+def save_verification(item_id,check_type,status,notes=""):
+    if check_type not in VERIFICATION_TYPES: raise ValueError("Tipo de verificación desconocido")
+    if status not in ("desconocido","pendiente","verificado","alerta"): raise ValueError("Estado inválido")
+    now=datetime.now(timezone.utc).isoformat()
+    with connect() as con:
+        con.execute("""INSERT INTO verification_checks(item_id,check_type,status,notes,checked_at)
+        VALUES(?,?,?,?,?) ON CONFLICT(item_id,check_type) DO UPDATE SET
+        status=excluded.status,notes=excluded.notes,checked_at=excluded.checked_at""",(item_id,check_type,status,notes,now))
+
+def verification_status(item_id):
+    states=[x["status"] for x in verification_checks(item_id)]
+    if "alerta" in states: return "alerta"
+    verified=sum(s=="verificado" for s in states)
+    return "verificado" if verified==len(states) else "parcial" if verified else "desconocido"
