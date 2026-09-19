@@ -1,6 +1,6 @@
 import streamlit as st, yaml, pandas as pd
 from pathlib import Path
-from database.db import init_db, upsert, all_items, price_history, auction_history
+from database.db import init_db, upsert, all_items, price_history, auction_history, verification_checks, save_verification, verification_status
 from collectors.eldeber import collect as collect_eldeber
 from collectors.bcp import collect as collect_bcp
 from analysis.filters import classify
@@ -66,6 +66,21 @@ def card(x, auction=False):
                 with st.expander("Ver historial de precios"):
                     hd=pd.DataFrame(hist)
                     st.dataframe(hd[[c for c in ["observed_at","price","currency","price_usd","price_bob"] if c in hd.columns]],hide_index=True,use_container_width=True)
+        if auction:
+            status=verification_status(x["id"])
+            icons={"desconocido":"⚪","parcial":"🟡","verificado":"🟢","alerta":"🔴"}
+            st.markdown(f"**Verificación jurídica:** {icons.get(status,'⚪')} {status.title()}")
+            names={"folio_real":"Folio Real actual","gravamenes":"Gravámenes / hipotecas / embargos","impuestos_municipales":"Impuestos municipales","ocupacion":"Ocupación / posesión","litigios_adicionales":"Litigios adicionales","propiedad_100":"Se vende 100% del derecho","plano_catastro":"Plano / catastro","visita_fisica":"Visita física"}
+            with st.expander("📑 Checklist de verificación"):
+                for check in verification_checks(x["id"]):
+                    key=check["check_type"]; current=check["status"]
+                    options=["desconocido","pendiente","verificado","alerta"]
+                    choice=st.selectbox(names[key],options,index=options.index(current),key=f"v_{x['id']}_{key}")
+                    note=st.text_input("Nota",value=check.get("notes") or "",key=f"n_{x['id']}_{key}",label_visibility="collapsed",placeholder=f"Nota sobre {names[key]}")
+                    if choice!=current or note!=(check.get("notes") or ""):
+                        if st.button(f"Guardar {names[key]}",key=f"s_{x['id']}_{key}"):
+                            save_verification(x["id"],key,choice,note); st.rerun()
+            st.caption("Este checklist registra comprobaciones; no certifica por sí mismo la situación jurídica del inmueble.")
         if x.get("url"): st.link_button("Abrir fuente original ↗",x["url"])
 
 st.title("🏠 Radar SCZ")
