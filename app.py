@@ -1,6 +1,6 @@
 import streamlit as st, yaml, pandas as pd
 from pathlib import Path
-from database.db import init_db, upsert, all_items
+from database.db import init_db, upsert, all_items, price_history
 from collectors.eldeber import collect as collect_eldeber
 from collectors.bcp import collect as collect_bcp
 from analysis.filters import classify
@@ -41,6 +41,15 @@ def card(x, auction=False):
         else:
             cols[2].metric("Categoría",cat.title())
             cols[3].metric("Detectado",str(x.get("first_seen",""))[:10] or "—")
+        hist=price_history(x["id"])
+        if len(hist)>1:
+            first=hist[0].get("price_usd"); last=hist[-1].get("price_usd")
+            if first and last and first!=last:
+                pct=(last-first)/first*100
+                st.markdown(f"📉 **Historial:** $us {first:,.2f} → $us {last:,.2f} ({pct:+.1f}%)")
+                with st.expander("Ver historial de precios"):
+                    hd=pd.DataFrame(hist)
+                    st.dataframe(hd[[c for c in ["observed_at","price","currency","price_usd","price_bob"] if c in hd.columns]],hide_index=True,use_container_width=True)
         if x.get("url"): st.link_button("Abrir fuente original ↗",x["url"])
 
 st.title("🏠 Radar SCZ")
@@ -54,16 +63,16 @@ top3.metric("👀 Negociables",sum(x["categoria"]=="negociable" for x in rows))
 top4.metric("🔨 Remates",sum(x["kind"]=="remate" for x in rows))
 
 if st.button("🔄 Actualizar fuentes",type="primary",use_container_width=True):
-    rate=float(cfg["moneda"]["usd_bob"]); total=0
+    rate=float(cfg["moneda"]["usd_bob"]); total=0; new_count=0; changed_count=0
     with st.status("Consultando fuentes públicas…",expanded=True):
         for name,collector in [("EL DEBER",collect_eldeber),("BCP Remates",collect_bcp)]:
             try:
                 found=collector(rate)
-                for item in found: upsert(item)
+                for item in found:\n                    event=upsert(item); new_count+=int(event["created"]); changed_count+=int(event["price_changed"])
                 total+=len(found); st.write(f"✓ {name}: {len(found)} registros procesados")
             except Exception as e:
                 st.warning(f"{name}: no se pudo actualizar. Las demás fuentes continúan. ({e})")
-    st.success(f"Actualización terminada: {total} registros procesados.")
+    st.success(f"Actualización terminada: {total} procesados · {new_count} nuevos · {changed_count} cambios de precio.")
     st.rerun()
 
 tabs=st.tabs(["🔥 Cumple","⚡ Excepciones","👀 Negociables","🔨 Remates","📋 Todo","⚙️ Configuración"])
