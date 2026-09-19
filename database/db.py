@@ -49,3 +49,13 @@ def price_history(item_id):
     with connect() as con: return [dict(r) for r in con.execute("SELECT * FROM price_history WHERE item_id=? ORDER BY observed_at",(item_id,))]
 def first_price(item_id):
     h=price_history(item_id); return h[0] if h else None
+
+def auction_history(registry):
+    """Eventos conocidos de una misma matrícula, sin asumir etapas faltantes."""
+    if not registry: return []
+    with connect() as con:
+        rows=con.execute("""SELECT id,source,source_id,title,url,registry,auction_number,
+          price,currency,price_usd,price_bob,auction_date,court,ownership_percent,first_seen
+          FROM items WHERE kind='remate' AND registry=?
+          ORDER BY COALESCE(auction_number,0), COALESCE(auction_date,first_seen)""",(registry,)).fetchall()
+        return [dict(r) for r in rows]
