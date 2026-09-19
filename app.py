@@ -1,6 +1,6 @@
 import streamlit as st, yaml, pandas as pd
 from pathlib import Path
-from database.db import init_db, upsert, all_items, price_history, auction_history, verification_checks, save_verification, verification_status
+from database.db import init_db, upsert, all_items, price_history, auction_history, verification_checks, save_verification, verification_status, get_mark, save_mark
 from collectors.eldeber import collect as collect_eldeber
 from collectors.bcp import collect as collect_bcp
 from analysis.filters import classify
@@ -92,6 +92,13 @@ def card(x, auction=False):
                         if st.button(f"Guardar {names[key]}",key=f"s_{x['id']}_{key}"):
                             save_verification(x["id"],key,choice,note); st.rerun()
             st.caption("Este checklist registra comprobaciones; no certifica por sí mismo la situación jurídica del inmueble.")
+        mark=get_mark(x["id"])
+        with st.expander("❤️ Guardar / 👀 Vigilar"):
+            fav=st.checkbox("❤️ Guardado",value=bool(mark["favorite"]),key=f"fav_{x['id']}")
+            watch=st.checkbox("👀 Vigilar cambios de precio",value=bool(mark["watching"]),key=f"watch_{x['id']}")
+            note=st.text_input("Nota personal",value=mark.get("notes") or "",key=f"marknote_{x['id']}")
+            if st.button("Guardar selección",key=f"marksave_{x['id']}"):
+                save_mark(x["id"],fav,watch,note); st.success("Guardado.")
         if x.get("url"): st.link_button("Abrir fuente original ↗",x["url"])
 
 st.title("🏠 Radar SCZ")
@@ -117,7 +124,7 @@ if st.button("🔄 Actualizar fuentes",type="primary",use_container_width=True):
     st.success(f"Actualización terminada: {total} procesados · {new_count} nuevos · {changed_count} cambios de precio.")
     st.rerun()
 
-tabs=st.tabs(["🔥 Cumple","⚡ Excepciones","👀 Negociables","🔨 Remates","📋 Todo","⚙️ Configuración"])
+tabs=st.tabs(["🔥 Cumple","⚡ Excepciones","👀 Negociables","🔨 Remates","❤️ Guardados","👀 Vigilar","📋 Todo","⚙️ Configuración"])
 with tabs[0]:
     data=[x for x in rows if x["categoria"]=="principal" and x["kind"]!="remate"]
     if data:
@@ -139,13 +146,23 @@ with tabs[3]:
         for x in sorted(data,key=lambda z:(-(z.get("auction_number") or 0),z.get("price_usd") or 1e18)): card(x,True)
     else: st.info("Pulsa Actualizar fuentes para consultar BCP Remates.")
 with tabs[4]:
+    data=[x for x in rows if get_mark(x["id"])["favorite"]]
+    if data:
+        for x in data: card(x,x["kind"]=="remate")
+    else: st.info("Marca ❤️ Guardado en cualquier tarjeta para verla aquí.")
+with tabs[5]:
+    data=[x for x in rows if get_mark(x["id"])["watching"]]
+    if data:
+        for x in data: card(x,x["kind"]=="remate")
+    else: st.info("Marca 👀 Vigilar para seguir futuras bajadas de precio.")
+with tabs[6]:
     if rows:
         cols=["source","kind","title","land_m2","built_m2","price","currency","price_usd","price_per_m2_usd","zone","registry","auction_number","categoria","url"]
         df=pd.DataFrame(rows)
         st.dataframe(df[[c for c in cols if c in df.columns]],use_container_width=True,hide_index=True,
                      column_config={"url":st.column_config.LinkColumn("Fuente")})
     else: st.info("La base está vacía. Pulsa Actualizar fuentes.")
-with tabs[5]:
+with tabs[7]:
     st.markdown("### Tus reglas actuales")
     b=cfg["busqueda"]
     st.write(f"**Objetivo:** ≥ {b['superficie_objetivo_min_m2']} m² · hasta $us {b['precio_max_usd']:,} o Bs {b['precio_max_bob']:,}")
