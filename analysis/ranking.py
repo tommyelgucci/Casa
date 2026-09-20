@@ -1,5 +1,6 @@
 """Puntuación económica transparente. No mide seguridad jurídica."""
 from statistics import median
+from datetime import datetime, timezone
 
 def comparable_median(item, items, minimum=5):
     area=item.get("land_m2"); zone=item.get("zone"); kind=item.get("kind")
@@ -10,6 +11,21 @@ def comparable_median(item, items, minimum=5):
         a=x.get("land_m2"); ppm=x.get("price_per_m2_usd")
         if a and ppm and area*.70<=a<=area*1.30: vals.append(ppm)
     return (median(vals),len(vals)) if len(vals)>=minimum else (None,len(vals))
+
+def _age_score(item,cfg):
+    if item.get("kind") in ("remate","adjudicacion"):
+        return 0
+    value=item.get("publication_date") or item.get("first_seen")
+    if not value:
+        return 0
+    try:
+        dt=datetime.fromisoformat(str(value).replace("Z","+00:00"))
+        if dt.tzinfo is None: dt=dt.replace(tzinfo=timezone.utc)
+        days=max(0,(datetime.now(timezone.utc)-dt.astimezone(timezone.utc)).days)
+        max_days=max(1,cfg["busqueda"].get("antiguedad_max_dias",90))
+        return max(0,5*(1-days/max_days))
+    except (ValueError,TypeError):
+        return 0
 
 def opportunity_score(item,cfg,items):
     parts={}; ppm=item.get("price_per_m2_usd")
@@ -26,7 +42,7 @@ def opportunity_score(item,cfg,items):
     area=item.get("land_m2") or 0; target=cfg["busqueda"]["superficie_objetivo_min_m2"]
     parts["superficie"]=min(10,10*area/target) if area else 0
     parts["descuento_zona"]=min(15,max(0,(discount or 0)/30*15)) if med else 0
-    parts["antiguedad"]=0
+    parts["antiguedad"]=_age_score(item,cfg)
     nrem=item.get("auction_number") or 0
     parts["remate_avanzado"]=min(5,max(0,nrem-1)*2.5) if item.get("kind") in ("remate","adjudicacion") else 0
     return {"total":round(sum(parts.values()),1),"parts":{k:round(v,1) for k,v in parts.items()},
