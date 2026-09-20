@@ -10,7 +10,7 @@ SOURCES=[
  {"id":"banco_ganadero","name":"Banco Ganadero","group":"remates","mode":"automatico","enabled":True},
  {"id":"sin","name":"SIN Subastas","group":"remates","mode":"automatico","enabled":True},
  {"id":"banco_economico","name":"Banco Económico","group":"remates","mode":"automatico","enabled":True},
- {"id":"infocasas","name":"InfoCasas Bolivia","group":"mercado","mode":"manual/experimental","enabled":False},
+ {"id":"infocasas","name":"InfoCasas Bolivia","group":"mercado","mode":"automático conservador/experimental","enabled":True},
  {"id":"ultracasas","name":"UltraCasas","group":"mercado","mode":"manual/pendiente","enabled":False},
  {"id":"remax","name":"RE/MAX Bolivia","group":"mercado","mode":"manual/pendiente","enabled":False},
  {"id":"facebook","name":"Facebook Marketplace","group":"mercado","mode":"manual","enabled":False},
