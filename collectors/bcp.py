@@ -30,7 +30,7 @@ def collect(rate=7.0):
         # En BCP el precio puede preceder a Bs. o $us.
         bob=_grab(text,r"([\d.]+,[\d]{2})\s*Bs\.?")
         usd=_grab(text,r"([\d.]+,[\d]{2})\s*\$us\.?")
-        court=_grab(text,r"(?:Juzgado[^,.]{0,100}|Número de juzgado\\s*[:\\-]?\\s*\\d+)")
+        court=_grab(text,r"(Juzgado[^,.]{0,100}|Número de juzgado\s*[:\-]?\s*\d+)")
         date=_grab(text,r"Fecha\s+de\s+remate\s*[:\-]?\s*([^|]{5,80}?)(?=\s+(?:lugar|juzgado|n[uú]mero|$))")
         item={"source":"bcp","source_id":url.rstrip("/").split("/")[-1],"kind":"remate",
               "title":"Remate BCP Santa Cruz","url":url,"land_m2":number(surface),
