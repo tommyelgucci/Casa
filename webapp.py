@@ -62,8 +62,12 @@ def home():
     elif view=="excepciones": shown=[x for x in rows if x["categoria"]=="excepcion"]
     elif view=="negociables": shown=[x for x in rows if x["categoria"]=="negociable"]
     elif view=="remates": shown=[x for x in rows if x.get("kind") in ("remate","adjudicacion")]
-    elif view=="favoritos": shown=marked_items("favorite")
-    elif view=="vigilar": shown=marked_items("watching")
+    elif view=="favoritos":
+        shown=marked_items("favorite")
+        for x in shown: x["categoria"]=classify(x,cfg)
+    elif view=="vigilar":
+        shown=marked_items("watching")
+        for x in shown: x["categoria"]=classify(x,cfg)
     elif view=="todo": shown=rows
     else: shown=[]
     for x in shown:
