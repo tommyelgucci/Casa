@@ -6,6 +6,7 @@ from collectors.bcp import collect as collect_bcp
 from collectors.ganadero import collect as collect_ganadero
 from collectors.sin import collect as collect_sin
 from collectors.economico import collect as collect_economico
+from collectors.infocasas import collect as collect_infocasas
 from analysis.filters import classify
 from analysis.events import events_for
 from analysis.ranking import opportunity_score
@@ -118,7 +119,7 @@ top4.metric("🔨 Remates",sum(x["kind"] in ("remate","adjudicacion") for x in r
 if st.button("🔄 Actualizar fuentes",type="primary",use_container_width=True):
     rate=float(cfg["moneda"]["usd_bob"]); total=0; new_count=0; changed_count=0
     with st.status("Consultando fuentes públicas…",expanded=True):
-        for name,collector in [("EL DEBER",collect_eldeber),("BCP Remates",collect_bcp),("Banco Ganadero",collect_ganadero),("SIN",collect_sin),("Banco Económico",collect_economico)]:
+        for name,collector in [("EL DEBER",collect_eldeber),("BCP Remates",collect_bcp),("Banco Ganadero",collect_ganadero),("SIN",collect_sin),("Banco Económico",collect_economico),("InfoCasas",collect_infocasas)]:
             try:
                 found=collector(rate)
                 for item in found:\n                    event=upsert(item); new_count+=int(event["created"]); changed_count+=int(event["price_changed"])
