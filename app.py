@@ -9,6 +9,7 @@ from collectors.economico import collect as collect_economico
 from analysis.filters import classify
 from analysis.events import events_for
 from analysis.ranking import opportunity_score
+from analysis.sources import coverage
 
 ROOT=Path(__file__).parent
 cfg=yaml.safe_load((ROOT/"config.yaml").read_text(encoding="utf-8"))
@@ -127,7 +128,7 @@ if st.button("🔄 Actualizar fuentes",type="primary",use_container_width=True):
     st.success(f"Actualización terminada: {total} procesados · {new_count} nuevos · {changed_count} cambios de precio.")
     st.rerun()
 
-tabs=st.tabs(["🔥 Cumple","⚡ Excepciones","👀 Negociables","🔨 Remates","❤️ Guardados","👀 Vigilar","📋 Todo","⚙️ Configuración"])
+tabs=st.tabs(["🔥 Cumple","⚡ Excepciones","👀 Negociables","🔨 Remates","❤️ Guardados","👀 Vigilar","📋 Todo","📡 Cobertura","⚙️ Configuración"])
 with tabs[0]:
     data=[x for x in rows if x["categoria"]=="principal" and x["kind"]!="remate"]
     if data:
@@ -166,6 +167,16 @@ with tabs[6]:
                      column_config={"url":st.column_config.LinkColumn("Fuente")})
     else: st.info("La base está vacía. Pulsa Actualizar fuentes.")
 with tabs[7]:
+    st.markdown("### 📡 Cobertura de fuentes")
+    st.caption("Aquí puedes comprobar qué portales están realmente aportando resultados. Cero registros no significa que no existan propiedades: puede significar que la fuente no está integrada o que su parser necesita revisión.")
+    cov=pd.DataFrame(coverage(rows))
+    st.dataframe(cov,use_container_width=True,hide_index=True)
+    market=sum(x["registros"] for x in coverage(rows) if x["group"]=="mercado" and x["enabled"])
+    auctions=sum(x["registros"] for x in coverage(rows) if x["group"]=="remates" and x["enabled"])
+    st.write(f"**Registros de mercado normal detectados:** {market}")
+    st.write(f"**Registros de remates/adjudicaciones detectados:** {auctions}")
+    st.warning("Radar todavía NO debe considerarse exhaustivo mientras InfoCasas, UltraCasas, RE/MAX y THOR sigan sin integración automática validada.")
+with tabs[8]:
     st.markdown("### Tus reglas actuales")
     b=cfg["busqueda"]
     st.write(f"**Objetivo:** ≥ {b['superficie_objetivo_min_m2']} m² · hasta $us {b['precio_max_usd']:,} o Bs {b['precio_max_bob']:,}")
