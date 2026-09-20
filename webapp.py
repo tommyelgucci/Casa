@@ -4,12 +4,19 @@ from pathlib import Path
 from database.db import init_db, all_items, upsert, get_mark, save_mark, marked_items, price_history, auction_history, verification_status, verification_checks, save_verification
 from analysis.filters import classify
 from analysis.ranking import opportunity_score
-from analysis.sources import coverage\nfrom collectors.eldeber import collect as collect_eldeber\nfrom collectors.bcp import collect as collect_bcp\nfrom collectors.ganadero import collect as collect_ganadero\nfrom collectors.sin import collect as collect_sin\nfrom collectors.economico import collect as collect_economico\nfrom collectors.infocasas import collect as collect_infocasas
+from analysis.sources import coverage
+from collectors.eldeber import collect as collect_eldeber
+from collectors.bcp import collect as collect_bcp
+from collectors.ganadero import collect as collect_ganadero
+from collectors.sin import collect as collect_sin
+from collectors.economico import collect as collect_economico
+from collectors.infocasas import collect as collect_infocasas
 
 ROOT=Path(__file__).parent
 cfg=yaml.safe_load((ROOT/"config.yaml").read_text(encoding="utf-8"))
 init_db()
-app=Flask(__name__)\nLAST_REPORT=[]
+app=Flask(__name__)
+LAST_REPORT=[]
 
 HTML=r"""<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Radar SCZ</title><style>
