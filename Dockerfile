@@ -5,5 +5,7 @@ ENV PYTHONUNBUFFERED=1
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
+# Fallar durante el build, no después del deploy, si aparece un error de sintaxis/importación.
+RUN python -m compileall -q . && python -c "import webapp; print('Radar SCZ import OK')"
 EXPOSE 8501
 CMD ["sh","-c","gunicorn --bind 0.0.0.0:${PORT:-8501} --workers 1 --threads 4 --timeout 120 webapp:app"]
