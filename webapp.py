@@ -55,7 +55,6 @@ def health(): return {"status":"ok"}
 
 @app.get("/")
 def home():
-    from flask import request
     rows=all_items()
     for x in rows:x["categoria"]=classify(x,cfg)
     view=request.args.get("view","principal")
@@ -63,6 +62,8 @@ def home():
     elif view=="excepciones": shown=[x for x in rows if x["categoria"]=="excepcion"]
     elif view=="negociables": shown=[x for x in rows if x["categoria"]=="negociable"]
     elif view=="remates": shown=[x for x in rows if x.get("kind") in ("remate","adjudicacion")]
+    elif view=="favoritos": shown=marked_items("favorite")
+    elif view=="vigilar": shown=marked_items("watching")
     elif view=="todo": shown=rows
     else: shown=[]
     for x in shown:
