@@ -31,5 +31,14 @@ Edita `config.yaml`. El tipo de cambio es configurable y sólo se usa para conve
 ## Recolectores
 Los recolectores consultan páginas públicas y no incluyen técnicas para evadir CAPTCHA, bloqueos, autenticación, límites o controles de acceso. Si una fuente falla, las demás continúan.
 
-## Próximas fases
-Banco Ganadero y SIN; después Banco Económico y alertas; otras fuentes se evaluarán conforme a sus condiciones y acceso técnico.
+## Fuentes actuales
+Radar incluye colectores para Clasificados EL DEBER, BCP Remates, Banco Ganadero, SIN, Banco Económico e InfoCasas (experimental). La pestaña 📡 Cobertura indica cuáles están aportando registros.
+
+## Arranque fácil
+- macOS/Linux: `bash run_radar.sh`
+- Windows: doble clic en `run_radar.bat` o ejecútalo desde Terminal.
+
+Los lanzadores crean `.venv`, instalan dependencias y abren Streamlit. Los scrapers se ejecutan desde Radar al pulsar **Actualizar fuentes**, no mediante GitHub Actions.
+
+## Prioridad actual
+Validar cobertura real de cada fuente y ampliar el mercado normal. Las alertas quedan pospuestas.
