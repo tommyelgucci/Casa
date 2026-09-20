@@ -3,7 +3,7 @@ from statistics import median
 
 def comparable_median(item, items, minimum=5):
     area=item.get("land_m2"); zone=item.get("zone"); kind=item.get("kind")
-    if not area or not zone or kind=="remate": return None,0
+    if not area or not zone or kind in ("remate","adjudicacion"): return None,0
     vals=[]
     for x in items:
         if x.get("id")==item.get("id") or x.get("kind")!=kind or x.get("zone")!=zone: continue
@@ -28,6 +28,6 @@ def opportunity_score(item,cfg,items):
     parts["descuento_zona"]=min(15,max(0,(discount or 0)/30*15)) if med else 0
     parts["antiguedad"]=0
     nrem=item.get("auction_number") or 0
-    parts["remate_avanzado"]=min(5,max(0,nrem-1)*2.5) if item.get("kind")=="remate" else 0
+    parts["remate_avanzado"]=min(5,max(0,nrem-1)*2.5) if item.get("kind") in ("remate","adjudicacion") else 0
     return {"total":round(sum(parts.values()),1),"parts":{k:round(v,1) for k,v in parts.items()},
             "median_ppm":med,"comparables":n,"discount_pct":round(discount,1) if discount is not None else None}
