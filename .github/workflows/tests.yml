@@ -1,9 +1,9 @@
 name: Radar SCZ tests
 
+# Manual-only on purpose. This account previously received a GitHub restriction
+# related to automatic workflows interacting with third-party services.
+# This workflow only installs this repository's test dependencies and runs pytest.
 on:
-  push:
-    branches: [main]
-  pull_request:
   workflow_dispatch:
 
 jobs:
@@ -17,5 +17,5 @@ jobs:
           cache: pip
       - name: Install dependencies
         run: pip install -r requirements.txt
-      - name: Run tests
+      - name: Run local unit tests
         run: pytest -q
