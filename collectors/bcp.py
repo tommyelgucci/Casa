@@ -22,7 +22,8 @@ def collect(rate=7.0):
     out=[]
     for url in links:
         d=s.get(url,timeout=20); d.raise_for_status(); page=BeautifulSoup(d.text,"html.parser")
-        text=" ".join(page.stripped_strings)\n        if "Tribunal departamental: Santa Cruz" not in text: continue
+        text=" ".join(page.stripped_strings)
+        if "Tribunal departamental: Santa Cruz" not in text: continue
         surface=_grab(text,r"(?:superficie(?:\s+de)?|sup\.)\s*[:\-]?\s*([\d.,]+)\s*(?:m²|mts?\.?\s*2|m2)")
         auction=_grab(text,r"(?:n[uú]mero\s+de\s+remate)\s*[:\-]?\s*0*(\d+)")
         registry=_grab(text,r"(?:matr[ií]cula|folio\s+con\s+matr[ií]cula)(?:\s+n[°ºo.]*)?\s*[:\-]?\s*([\d.]+)")
