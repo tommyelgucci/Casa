@@ -87,11 +87,22 @@ def actualizar():
     report=[]
     for name,collector in collectors:
         try:
-            found=collector(rate)
-            new=0; changed=0
+            found=collector(rate) or []
+            new=0
+            changed=0
+            rejected=0
             for item in found:
-                result=upsert(item); new+=int(result["created"]); changed+=int(result["price_changed"])
-            report.append(f"✅ {name}: {len(found)} encontrados · {new} nuevos · {changed} cambios de precio")
+                if not isinstance(item,dict) or not item.get("url") or not item.get("source"):
+                    rejected+=1
+                    continue
+                try:
+                    result=upsert(item)
+                    new+=int(result["created"])
+                    changed+=int(result["price_changed"])
+                except Exception:
+                    rejected+=1
+            suffix=f" · {rejected} descartados por datos inválidos" if rejected else ""
+            report.append(f"✅ {name}: {len(found)} encontrados · {new} nuevos · {changed} cambios de precio{suffix}")
         except Exception as exc:
             report.append(f"⚠️ {name}: {type(exc).__name__}: {str(exc)[:160]}")
     LAST_REPORT=report
