@@ -31,7 +31,7 @@ def collect(rate=7.0):
         pm=re.search(r"(?:Bs\.?\s*)?([\d.]+,[\d]{2})",block,re.I)
         price=number(pm.group(1)) if pm else None
         own=_ownership(block)
-        mode="adjudicacion" if "ADJUDICACIÓN" in block.upper() else "remate"
+        upper=block.upper()\n        mode="adjudicacion" if "ADJUDICACIÓN DIRECTA" in upper else "remate"
         zone=None; low=block.lower()
         for k,words in {"cotoca":["cotoca"],"warnes":["warnes"],"porongo":["porongo"],"urubo":["urubó","urubo"],"zona_norte":["zona norte","nor este","noreste"]}.items():
             if any(w in low for w in words): zone=k; break
