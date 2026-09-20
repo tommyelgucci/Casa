@@ -26,7 +26,7 @@ def collect(rate=7.0):
         text=" ".join(p.stripped_strings); low=text.lower()
         if "ciudad:santa cruz" not in low and "ciudad: santa cruz" not in low: continue
         # Evita remates de automotores/bienes muebles.
-        if ("bien mueble" in low or "vehículo" in low or "vehiculo" in low) and "inmueble" not in low: continue
+        if "bien mueble" in low or "vehículo" in low or "vehiculo" in low: continue
         surface=_first(text,r"(?:superficie|sup\.)\s*(?:de)?\s*([\d.,]+)\s*(?:m2|mts2|m²)")
         registry=_first(text,r"matr[ií]cula(?:\s+n[°ºo.]*)?\s*([\d.]+)")
         audience=_first(text,r"Audiencia\s*:\s*(\d+)")
