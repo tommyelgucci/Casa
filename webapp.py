@@ -34,7 +34,8 @@ h1{margin-bottom:4px}.muted{color:#9aa4b2}.tabs{display:flex;gap:8px;overflow:au
 <input type="hidden" name="view" value="{{view}}">
 <label>Precio<br><select name="price_sort" style="padding:8px;border-radius:8px"><option value="">Sin ordenar</option><option value="asc" {% if price_sort=="asc" %}selected{% endif %}>Más barato → más caro</option><option value="desc" {% if price_sort=="desc" %}selected{% endif %}>Más caro → más barato</option></select></label>
 <label>Superficie<br><select name="area_sort" style="padding:8px;border-radius:8px"><option value="">Sin ordenar</option><option value="desc" {% if area_sort=="desc" %}selected{% endif %}>Mayor m² → menor m²</option><option value="asc" {% if area_sort=="asc" %}selected{% endif %}>Menor m² → mayor m²</option></select></label>
-<label>Prioridad<br><select name="priority" style="padding:8px;border-radius:8px"><option value="price" {% if priority=="price" %}selected{% endif %}>Precio primero</option><option value="area" {% if priority=="area" %}selected{% endif %}>Superficie primero</option></select></label>
+<label>Antigüedad<br><select name="date_sort" style="padding:8px;border-radius:8px"><option value="">Sin ordenar</option><option value="desc" {% if date_sort=="desc" %}selected{% endif %}>Más nuevo → más antiguo</option><option value="asc" {% if date_sort=="asc" %}selected{% endif %}>Más antiguo → más nuevo</option></select></label>
+<label>Prioridad<br><select name="priority" style="padding:8px;border-radius:8px"><option value="price" {% if priority=="price" %}selected{% endif %}>Precio primero</option><option value="area" {% if priority=="area" %}selected{% endif %}>Superficie primero</option><option value="date" {% if priority=="date" %}selected{% endif %}>Fecha primero</option></select></label>
 <button style="padding:9px 14px;border-radius:8px">Aplicar filtros</button>
 <a href="/?view={{view}}" style="padding:9px">Limpiar</a>
 </form><div class="grid">
@@ -86,17 +87,27 @@ def home():
         x["verification"]=verification_status(x["id"]) if x.get("kind") in ("remate","adjudicacion") else ""
     price_sort=request.args.get("price_sort","")
     area_sort=request.args.get("area_sort","")
+    date_sort=request.args.get("date_sort","")
     priority=request.args.get("priority","price")
     def sort_value(x, field, direction):
         value=x.get(field)
         if value is None:
             return float("inf") if direction=="asc" else float("-inf")
+        if field=="first_seen":
+            return str(value)
         return float(value)
     criteria=[]
+    # criteria are appended secondary -> primary because Python sorting is stable.
     if priority=="area":
+        if date_sort: criteria.append(("first_seen",date_sort))
         if price_sort: criteria.append(("price_usd",price_sort))
         if area_sort: criteria.append(("land_m2",area_sort))
+    elif priority=="date":
+        if area_sort: criteria.append(("land_m2",area_sort))
+        if price_sort: criteria.append(("price_usd",price_sort))
+        if date_sort: criteria.append(("first_seen",date_sort))
     else:
+        if date_sort: criteria.append(("first_seen",date_sort))
         if area_sort: criteria.append(("land_m2",area_sort))
         if price_sort: criteria.append(("price_usd",price_sort))
     if criteria:
@@ -106,7 +117,7 @@ def home():
     else:
         shown.sort(key=lambda x:x.get("score",0),reverse=True)
     tabs=[("principal","🔥 Cumple"),("excepciones","⚡ Excepciones"),("negociables","👀 Negociables"),("remates","🔨 Remates"),("favoritos","❤️ Guardados"),("vigilar","👀 Vigilar"),("todo","📋 Todo"),("cobertura","📡 Cobertura"),("config","⚙️ Configuración")]
-    return render_template_string(HTML,items=shown,view=view,tabs=tabs,cov=coverage(rows),report=LAST_REPORT,cfg=cfg,price_sort=price_sort,area_sort=area_sort,priority=priority)
+    return render_template_string(HTML,items=shown,view=view,tabs=tabs,cov=coverage(rows),report=LAST_REPORT,cfg=cfg,price_sort=price_sort,area_sort=area_sort,date_sort=date_sort,priority=priority)
 
 
 @app.post("/actualizar")
