@@ -77,7 +77,11 @@ def home():
     elif view=="vigilar":
         shown=marked_items("watching")
         for x in shown: x["categoria"]=classify(x,cfg)
-    elif view=="todo": shown=rows
+    elif view=="todo":
+        # "Todo" sigue siendo útil, pero no inundamos la vista con anuncios normales
+        # absurdamente fuera del objetivo. Los remates se conservan completos.
+        shown=[x for x in rows if x.get("kind") in ("remate","adjudicacion")
+               or x.get("price_usd") is None or x.get("price_usd")<=250000]
     else: shown=[]
     for x in shown:
         x["score"]=opportunity_score(x,cfg,rows)["total"]; x["money"]=money(x)
