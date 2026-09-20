@@ -21,7 +21,7 @@ h1{margin-bottom:4px}.muted{color:#9aa4b2}.tabs{display:flex;gap:8px;overflow:au
 <form method="post" action="/actualizar" style="margin:14px 0"><button style="background:#7c3aed;color:white;border:0;border-radius:10px;padding:11px 16px;font-weight:700">🔄 Actualizar fuentes</button></form>
 {% if report %}<div class="card"><b>Última actualización</b>{% for r in report %}<p>{{r}}</p>{% endfor %}</div>{% endif %}
 <div class="tabs">{% for key,label in tabs %}<a href="/?view={{key}}">{{label}}</a>{% endfor %}</div>
-{% if view=="cobertura" %}<h2>📡 Cobertura</h2><div class="grid">{% for s in cov %}<div class="card"><b>{{s.name}}</b><p>{{s.mode}}</p><span class="pill">{{s.registros}} registros</span></div>{% endfor %}</div>
+{% if view=="cobertura" %}<h2>📡 Cobertura</h2><div class="grid">{% for s in cov %}<div class="card"><b>{{s.name}}</b><p>{{s.mode}}</p><span class="pill">{{s.registros}} registros</span></div>{% endfor %}</div>{% elif view=="config" %}<h2>⚙️ Configuración activa</h2><div class="card"><p>Objetivo: ≥ {{cfg.busqueda.superficie_objetivo_min_m2}} m² · Excepción: ≥ {{cfg.busqueda.superficie_excepcion_min_m2}} m²</p><p>Principal: $us {{cfg.busqueda.precio_max_usd}} o Bs {{cfg.busqueda.precio_max_bob}}</p><p>Negociable: $us {{cfg.busqueda.precio_negociable_usd}} o Bs {{cfg.busqueda.precio_negociable_bob}}</p><p>Tipo de cambio configurado: 1 USD = Bs {{cfg.moneda.usd_bob}} <b>(referencia configurable, no cotización en vivo)</b></p><p>Antigüedad máxima de anuncios normales: {{cfg.busqueda.antiguedad_max_dias}} días</p><p>Copropiedad permitida: {{cfg.remates.permitir_copropiedad}}</p></div>
 {% else %}<p class="muted">{{items|length}} resultados almacenados. Un cero también puede significar que una fuente todavía necesita ajuste técnico.</p><div class="grid">
 {% for x in items %}<div class="card"><div class="score">🎯 {{x.score}}/100</div><h3>{{x.title or "Propiedad"}}</h3>
 <div class="price">{{x.money}}</div><div class="stats"><span>📐 {{x.area}}</span><span>📍 {{x.zone or "Por revisar"}}</span></div>
@@ -65,8 +65,8 @@ def home():
         x["auction_hist"]=auction_history(x.get("registry")) if x.get("registry") else []
         x["verification"]=verification_status(x["id"]) if x.get("kind") in ("remate","adjudicacion") else ""
     shown.sort(key=lambda x:x.get("score",0),reverse=True)
-    tabs=[("principal","🔥 Cumple"),("excepciones","⚡ Excepciones"),("negociables","👀 Negociables"),("remates","🔨 Remates"),("favoritos","❤️ Guardados"),("vigilar","👀 Vigilar"),("todo","📋 Todo"),("cobertura","📡 Cobertura")]
-    return render_template_string(HTML,items=shown,view=view,tabs=tabs,cov=coverage(rows),report=LAST_REPORT)
+    tabs=[("principal","🔥 Cumple"),("excepciones","⚡ Excepciones"),("negociables","👀 Negociables"),("remates","🔨 Remates"),("favoritos","❤️ Guardados"),("vigilar","👀 Vigilar"),("todo","📋 Todo"),("cobertura","📡 Cobertura"),("config","⚙️ Configuración")]
+    return render_template_string(HTML,items=shown,view=view,tabs=tabs,cov=coverage(rows),report=LAST_REPORT,cfg=cfg)
 
 
 @app.post("/actualizar")
