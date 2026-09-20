@@ -1,7 +1,7 @@
-from flask import Flask, render_template_string, redirect, url_for
+from flask import Flask, render_template_string, redirect, url_for, request
 import yaml
 from pathlib import Path
-from database.db import init_db, all_items, upsert
+from database.db import init_db, all_items, upsert, get_mark, save_mark, marked_items
 from analysis.filters import classify
 from analysis.ranking import opportunity_score
 from analysis.sources import coverage\nfrom collectors.eldeber import collect as collect_eldeber\nfrom collectors.bcp import collect as collect_bcp\nfrom collectors.ganadero import collect as collect_ganadero\nfrom collectors.sin import collect as collect_sin\nfrom collectors.economico import collect as collect_economico\nfrom collectors.infocasas import collect as collect_infocasas
@@ -27,7 +27,12 @@ h1{margin-bottom:4px}.muted{color:#9aa4b2}.tabs{display:flex;gap:8px;overflow:au
 <div class="price">{{x.money}}</div><div class="stats"><span>📐 {{x.area}}</span><span>📍 {{x.zone or "Por revisar"}}</span></div>
 <p><span class="pill">{{x.category}}</span> <span class="pill">{{x.source}}</span></p>
 {% if x.registry %}<p>🔖 Matrícula: {{x.registry}}</p>{% endif %}{% if x.auction_date %}<p>📅 {{x.auction_date}}</p>{% endif %}
-<a href="{{x.url}}" target="_blank" rel="noopener">Abrir fuente ↗</a></div>{% else %}<div class="card"><h3>Aún no hay resultados</h3><p>La web ya funciona. El siguiente paso es ejecutar y validar los colectores reales.</p></div>{% endfor %}</div>{% endif %}
+<a href="{{x.url}}" target="_blank" rel="noopener">Abrir fuente ↗</a>
+<form method="post" action="/marca/{{x.id}}" style="margin-top:12px;display:flex;gap:8px">
+<input type="hidden" name="back" value="{{view}}">
+<button name="action" value="favorite" style="padding:7px;border-radius:8px">❤️ Guardar</button>
+<button name="action" value="watching" style="padding:7px;border-radius:8px">👀 Vigilar</button>
+</form></div>{% else %}<div class="card"><h3>Aún no hay resultados</h3><p>La web ya funciona. El siguiente paso es ejecutar y validar los colectores reales.</p></div>{% endfor %}</div>{% endif %}
 </div></body></html>"""
 
 def money(x):
@@ -54,7 +59,7 @@ def home():
         x["score"]=opportunity_score(x,cfg,rows)["total"]; x["money"]=money(x)
         x["area"]=f'{x["land_m2"]:,.0f} m²' if x.get("land_m2") else "Superficie no detectada"; x["category"]=x["categoria"].upper()
     shown.sort(key=lambda x:x.get("score",0),reverse=True)
-    tabs=[("principal","🔥 Cumple"),("excepciones","⚡ Excepciones"),("negociables","👀 Negociables"),("remates","🔨 Remates"),("todo","📋 Todo"),("cobertura","📡 Cobertura")]
+    tabs=[("principal","🔥 Cumple"),("excepciones","⚡ Excepciones"),("negociables","👀 Negociables"),("remates","🔨 Remates"),("favoritos","❤️ Guardados"),("vigilar","👀 Vigilar"),("todo","📋 Todo"),("cobertura","📡 Cobertura")]
     return render_template_string(HTML,items=shown,view=view,tabs=tabs,cov=coverage(rows),report=LAST_REPORT)
 
 
@@ -78,3 +83,13 @@ def actualizar():
             report.append(f"⚠️ {name}: {type(exc).__name__}: {str(exc)[:160]}")
     LAST_REPORT=report
     return redirect(url_for("home",view="todo"))
+
+
+@app.post("/marca/<int:item_id>")
+def marca(item_id):
+    mark=get_mark(item_id); action=request.form.get("action")
+    fav=bool(mark.get("favorite")); watch=bool(mark.get("watching"))
+    if action=="favorite": fav=not fav
+    if action=="watching": watch=not watch
+    save_mark(item_id,fav,watch,mark.get("notes") or "")
+    return redirect(url_for("home",view=request.form.get("back","todo")))
