@@ -3,6 +3,8 @@ from pathlib import Path
 from database.db import init_db, upsert, all_items, price_history, auction_history, verification_checks, save_verification, verification_status, get_mark, save_mark
 from collectors.eldeber import collect as collect_eldeber
 from collectors.bcp import collect as collect_bcp
+from collectors.ganadero import collect as collect_ganadero
+from collectors.sin import collect as collect_sin
 from analysis.filters import classify
 from analysis.events import events_for
 from analysis.ranking import opportunity_score
@@ -109,12 +111,12 @@ for x in rows: x["categoria"]=classify(x,cfg)
 top1.metric("🔥 Cumplen",sum(x["categoria"]=="principal" for x in rows))
 top2.metric("⚡ Excepciones",sum(x["categoria"]=="excepcion" for x in rows))
 top3.metric("👀 Negociables",sum(x["categoria"]=="negociable" for x in rows))
-top4.metric("🔨 Remates",sum(x["kind"]=="remate" for x in rows))
+top4.metric("🔨 Remates",sum(x["kind"] in ("remate","adjudicacion") for x in rows))
 
 if st.button("🔄 Actualizar fuentes",type="primary",use_container_width=True):
     rate=float(cfg["moneda"]["usd_bob"]); total=0; new_count=0; changed_count=0
     with st.status("Consultando fuentes públicas…",expanded=True):
-        for name,collector in [("EL DEBER",collect_eldeber),("BCP Remates",collect_bcp)]:
+        for name,collector in [("EL DEBER",collect_eldeber),("BCP Remates",collect_bcp),("Banco Ganadero",collect_ganadero),("SIN",collect_sin)]:
             try:
                 found=collector(rate)
                 for item in found:\n                    event=upsert(item); new_count+=int(event["created"]); changed_count+=int(event["price_changed"])
@@ -141,7 +143,7 @@ with tabs[2]:
         for x in sorted(data,key=lambda z:z.get("price_per_m2_usd") or 1e18): card(x)
     else: st.info("Aquí aparecerán propiedades cercanas al presupuesto para vigilar o negociar.")
 with tabs[3]:
-    data=[x for x in rows if x["kind"]=="remate"]
+    data=[x for x in rows if x["kind"] in ("remate","adjudicacion")]
     if data:
         for x in sorted(data,key=lambda z:(-(z.get("auction_number") or 0),z.get("price_usd") or 1e18)): card(x,True)
     else: st.info("Pulsa Actualizar fuentes para consultar BCP Remates.")
