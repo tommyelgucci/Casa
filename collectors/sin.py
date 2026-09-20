@@ -17,7 +17,8 @@ def _ownership(text):
 
 def collect(rate=7.0):
     r=requests.get(URL,timeout=25,headers={"User-Agent":"RadarSCZ-personal/0.1"})
-    r.raise_for_status(); soup=BeautifulSoup(r.text,"html.parser"); text="\n".join(soup.stripped_strings)
+    r.raise_for_status(); soup=BeautifulSoup(r.text,"html.parser"); text="
+".join(soup.stripped_strings)
     # Las fichas del índice empiezan por expediente BI-xx-...
     starts=list(re.finditer(r"BI-\d{2}-\d{4}-\d+(?:-PRSP)?",text,re.I)); out=[]; seen=set()
     for i,m in enumerate(starts):
@@ -31,7 +32,8 @@ def collect(rate=7.0):
         pm=re.search(r"(?:Bs\.?\s*)?([\d.]+,[\d]{2})",block,re.I)
         price=number(pm.group(1)) if pm else None
         own=_ownership(block)
-        upper=block.upper()\n        mode="adjudicacion" if "ADJUDICACIÓN DIRECTA" in upper else "remate"
+        upper=block.upper()
+        mode="adjudicacion" if "ADJUDICACIÓN DIRECTA" in upper else "remate"
         zone=None; low=block.lower()
         for k,words in {"cotoca":["cotoca"],"warnes":["warnes"],"porongo":["porongo"],"urubo":["urubó","urubo"],"zona_norte":["zona norte","nor este","noreste"]}.items():
             if any(w in low for w in words): zone=k; break
