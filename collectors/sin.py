@@ -17,8 +17,7 @@ def _ownership(text):
 
 def collect(rate=7.0):
     r=requests.get(URL,timeout=25,headers={"User-Agent":"RadarSCZ-personal/0.1"})
-    r.raise_for_status(); soup=BeautifulSoup(r.text,"html.parser"); text="
-".join(soup.stripped_strings)
+    r.raise_for_status(); soup=BeautifulSoup(r.text,"html.parser"); text=" ".join(soup.stripped_strings)
     # Las fichas del índice empiezan por expediente BI-xx-...
     starts=list(re.finditer(r"BI-\d{2}-\d{4}-\d+(?:-PRSP)?",text,re.I)); out=[]; seen=set()
     for i,m in enumerate(starts):
@@ -29,7 +28,7 @@ def collect(rate=7.0):
         if "Santa Cruz" not in block: continue
         seen.add(sid)
         surf=_surface(block)
-        pm=re.search(r"(?:Bs\.?\s*)?([\d.]+,[\d]{2})",block,re.I)
+        pm=re.search(r"Bs\.?\s*([\d.]+,[\d]{2})",block,re.I)
         price=number(pm.group(1)) if pm else None
         own=_ownership(block)
         upper=block.upper()
