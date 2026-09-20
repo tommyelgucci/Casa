@@ -1,7 +1,7 @@
 from flask import Flask, render_template_string, redirect, url_for, request
 import yaml
 from pathlib import Path
-from database.db import init_db, all_items, upsert, get_mark, save_mark, marked_items, price_history, auction_history, verification_status
+from database.db import init_db, all_items, upsert, get_mark, save_mark, marked_items, price_history, auction_history, verification_status, verification_checks, save_verification
 from analysis.filters import classify
 from analysis.ranking import opportunity_score
 from analysis.sources import coverage\nfrom collectors.eldeber import collect as collect_eldeber\nfrom collectors.bcp import collect as collect_bcp\nfrom collectors.ganadero import collect as collect_ganadero\nfrom collectors.sin import collect as collect_sin\nfrom collectors.economico import collect as collect_economico\nfrom collectors.infocasas import collect as collect_infocasas
@@ -29,7 +29,7 @@ h1{margin-bottom:4px}.muted{color:#9aa4b2}.tabs{display:flex;gap:8px;overflow:au
 {% if x.registry %}<p>🔖 Matrícula: {{x.registry}}</p>{% endif %}{% if x.auction_date %}<p>📅 {{x.auction_date}}</p>{% endif %}
 {% if x.price_hist|length > 1 %}<details><summary>📈 Historial de precios ({{x.price_hist|length}})</summary>{% for h in x.price_hist %}<p>{{h.observed_at[:10]}} · {{h.currency or ""}} {{h.price or "—"}}</p>{% endfor %}</details>{% endif %}
 {% if x.auction_hist|length > 1 %}<details><summary>🔨 Historial conocido de matrícula</summary>{% for h in x.auction_hist %}<p>Remate {{h.auction_number or "—"}} · {{h.currency or ""}} {{h.price or "—"}} · {{h.auction_date or "fecha por revisar"}}</p>{% endfor %}<small class="muted">Sólo eventos encontrados; no se infieren etapas faltantes.</small></details>{% endif %}
-{% if x.kind in ["remate","adjudicacion"] %}<p>⚖️ Verificación jurídica: <b>{{x.verification}}</b></p>{% endif %}
+{% if x.kind in ["remate","adjudicacion"] %}<p>⚖️ Verificación jurídica: <b>{{x.verification}}</b> · <a href="/verificar/{{x.id}}">abrir checklist</a></p>{% endif %}
 <a href="{{x.url}}" target="_blank" rel="noopener">Abrir fuente ↗</a>
 <form method="post" action="/marca/{{x.id}}" style="margin-top:12px;display:flex;gap:8px">
 <input type="hidden" name="back" value="{{view}}">
@@ -99,3 +99,21 @@ def marca(item_id):
     if action=="watching": watch=not watch
     save_mark(item_id,fav,watch,mark.get("notes") or "")
     return redirect(url_for("home",view=request.form.get("back","todo")))
+
+
+VERIFY_HTML=r"""<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Verificación · Radar SCZ</title>
+<style>body{font-family:system-ui;background:#0e1117;color:#fff;max-width:760px;margin:auto;padding:20px}.row{background:#171b24;padding:12px;margin:8px 0;border-radius:10px}select,input{padding:8px;width:100%;box-sizing:border-box;margin:5px 0}button{padding:10px 15px}</style></head><body>
+<a href="/?view=remates" style="color:#9ecbff">← Remates</a><h1>⚖️ Checklist jurídico</h1><p>Esto organiza comprobaciones; no sustituye revisión legal, registral ni una visita física.</p>
+<form method="post">{% for x in checks %}<div class="row"><b>{{labels.get(x.check_type,x.check_type)}}</b><select name="status_{{x.check_type}}">{% for s in states %}<option value="{{s}}" {% if s==x.status %}selected{% endif %}>{{s}}</option>{% endfor %}</select><input name="notes_{{x.check_type}}" value="{{x.notes or ''}}" placeholder="Notas / documento comprobado"></div>{% endfor %}<button>Guardar</button></form></body></html>"""
+
+@app.route("/verificar/<int:item_id>",methods=["GET","POST"])
+def verificar(item_id):
+    states=["desconocido","pendiente","verificado","alerta"]
+    labels={"folio_real":"Folio Real vigente","gravamenes":"Gravámenes","impuestos_municipales":"Impuestos municipales","ocupacion":"Ocupación","litigios_adicionales":"Litigios adicionales","propiedad_100":"100% de propiedad","plano_catastro":"Plano / catastro","visita_fisica":"Visita física"}
+    checks=verification_checks(item_id)
+    if request.method=="POST":
+        for x in checks:
+            t=x["check_type"]
+            save_verification(item_id,t,request.form.get("status_"+t,"desconocido"),request.form.get("notes_"+t,""))
+        return redirect(url_for("verificar",item_id=item_id))
+    return render_template_string(VERIFY_HTML,checks=checks,states=states,labels=labels)
