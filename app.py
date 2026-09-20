@@ -122,7 +122,10 @@ if st.button("🔄 Actualizar fuentes",type="primary",use_container_width=True):
         for name,collector in [("EL DEBER",collect_eldeber),("BCP Remates",collect_bcp),("Banco Ganadero",collect_ganadero),("SIN",collect_sin),("Banco Económico",collect_economico),("InfoCasas",collect_infocasas)]:
             try:
                 found=collector(rate)
-                for item in found:\n                    event=upsert(item); new_count+=int(event["created"]); changed_count+=int(event["price_changed"])
+                for item in found:
+                    event=upsert(item)
+                    new_count+=int(event["created"])
+                    changed_count+=int(event["price_changed"])
                 total+=len(found); st.write(f"✓ {name}: {len(found)} registros procesados")
             except Exception as e:
                 st.warning(f"{name}: no se pudo actualizar. Las demás fuentes continúan. ({e})")
@@ -131,7 +134,7 @@ if st.button("🔄 Actualizar fuentes",type="primary",use_container_width=True):
 
 tabs=st.tabs(["🔥 Cumple","⚡ Excepciones","👀 Negociables","🔨 Remates","❤️ Guardados","👀 Vigilar","📋 Todo","📡 Cobertura","⚙️ Configuración"])
 with tabs[0]:
-    data=[x for x in rows if x["categoria"]=="principal" and x["kind"]!="remate"]
+    data=[x for x in rows if x["categoria"]=="principal" and x["kind"] not in ("remate","adjudicacion")]
     if data:
         for x in sorted(data,key=lambda z:z.get("price_per_m2_usd") or 1e18): card(x)
     else: st.info("Todavía no hay anuncios normales que cumplan superficie y presupuesto.")
@@ -149,11 +152,11 @@ with tabs[3]:
     data=[x for x in rows if x["kind"] in ("remate","adjudicacion")]
     if data:
         for x in sorted(data,key=lambda z:(-(z.get("auction_number") or 0),z.get("price_usd") or 1e18)): card(x,True)
-    else: st.info("Pulsa Actualizar fuentes para consultar BCP Remates.")
+    else: st.info("Pulsa Actualizar fuentes para consultar las fuentes de remates y adjudicaciones.")
 with tabs[4]:
     data=[x for x in rows if get_mark(x["id"])["favorite"]]
     if data:
-        for x in data: card(x,x["kind"]=="remate")
+        for x in data: card(x,x["kind"] in ("remate","adjudicacion"))
     else: st.info("Marca ❤️ Guardado en cualquier tarjeta para verla aquí.")
 with tabs[5]:
     data=[x for x in rows if get_mark(x["id"])["watching"]]
