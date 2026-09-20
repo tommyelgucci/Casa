@@ -2,10 +2,28 @@
 Conserva resultados de Santa Cruz incluso si están fuera del presupuesto,
 para permitir análisis posterior. No evade controles técnicos.
 """
-import re, requests
+import re, time, requests
 from bs4 import BeautifulSoup
 from .common import number, enrich_currency
 URL="https://subastas.impuestos.gob.bo/"
+TIMEOUT=(8,45)
+RETRIES=3
+
+def _fetch():
+    last=None
+    for attempt in range(RETRIES):
+        try:
+            r=requests.get(URL,timeout=TIMEOUT,headers={
+                "User-Agent":"Mozilla/5.0 (compatible; RadarSCZ/0.1; personal property research)",
+                "Accept":"text/html,application/xhtml+xml"
+            })
+            r.raise_for_status()
+            return r
+        except (requests.exceptions.ConnectTimeout, requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError) as exc:
+            last=exc
+            if attempt < RETRIES-1:
+                time.sleep(2*(attempt+1))
+    raise last
 
 def _surface(block):
     m=re.search(r"(?:SUPERFICIE\s*[:.]?\s*)?([\d.,]+)\s*(?:MTS?\.?\s*2|MTRS?2|M2|Metros²)",block,re.I)
@@ -16,8 +34,8 @@ def _ownership(text):
     return number(m.group(1)) if m else 100.0 if re.search(r"100%|100 %",text) else None
 
 def collect(rate=7.0):
-    r=requests.get(URL,timeout=25,headers={"User-Agent":"RadarSCZ-personal/0.1"})
-    r.raise_for_status(); soup=BeautifulSoup(r.text,"html.parser"); text=" ".join(soup.stripped_strings)
+    r=_fetch()
+    soup=BeautifulSoup(r.text,"html.parser"); text=" ".join(soup.stripped_strings)
     # Las fichas del índice empiezan por expediente BI-xx-...
     starts=list(re.finditer(r"BI-\d{2}-\d{4}-\d+(?:-PRSP)?",text,re.I)); out=[]; seen=set()
     for i,m in enumerate(starts):
