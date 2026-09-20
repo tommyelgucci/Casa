@@ -1,15 +1,15 @@
 from flask import Flask, render_template_string, redirect, url_for
 import yaml
 from pathlib import Path
-from database.db import init_db, all_items
+from database.db import init_db, all_items, upsert
 from analysis.filters import classify
 from analysis.ranking import opportunity_score
-from analysis.sources import coverage
+from analysis.sources import coverage\nfrom collectors.eldeber import collect as collect_eldeber\nfrom collectors.bcp import collect as collect_bcp\nfrom collectors.ganadero import collect as collect_ganadero\nfrom collectors.sin import collect as collect_sin\nfrom collectors.economico import collect as collect_economico\nfrom collectors.infocasas import collect as collect_infocasas
 
 ROOT=Path(__file__).parent
 cfg=yaml.safe_load((ROOT/"config.yaml").read_text(encoding="utf-8"))
 init_db()
-app=Flask(__name__)
+app=Flask(__name__)\nLAST_REPORT=[]
 
 HTML=r"""<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Radar SCZ</title><style>
@@ -18,6 +18,8 @@ h1{margin-bottom:4px}.muted{color:#9aa4b2}.tabs{display:flex;gap:8px;overflow:au
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:12px}.card{background:#171b24;border:1px solid #303746;border-radius:14px;padding:15px}.score{font-size:22px;font-weight:700}
 .price{font-size:20px;font-weight:700}.pill{display:inline-block;padding:4px 8px;background:#292f3d;border-radius:20px;font-size:12px}.card a{color:#9ecbff}.stats{display:flex;gap:18px;flex-wrap:wrap;margin:8px 0}
 </style></head><body><div class="wrap"><h1>🏠 Radar SCZ</h1><div class="muted">Terrenos, casas y remates · Santa Cruz, Bolivia</div>
+<form method="post" action="/actualizar" style="margin:14px 0"><button style="background:#7c3aed;color:white;border:0;border-radius:10px;padding:11px 16px;font-weight:700">🔄 Actualizar fuentes</button></form>
+{% if report %}<div class="card"><b>Última actualización</b>{% for r in report %}<p>{{r}}</p>{% endfor %}</div>{% endif %}
 <div class="tabs">{% for key,label in tabs %}<a href="/?view={{key}}">{{label}}</a>{% endfor %}</div>
 {% if view=="cobertura" %}<h2>📡 Cobertura</h2><div class="grid">{% for s in cov %}<div class="card"><b>{{s.name}}</b><p>{{s.mode}}</p><span class="pill">{{s.registros}} registros</span></div>{% endfor %}</div>
 {% else %}<p class="muted">{{items|length}} resultados almacenados. Un cero también puede significar que una fuente todavía necesita ajuste técnico.</p><div class="grid">
@@ -53,4 +55,26 @@ def home():
         x["area"]=f'{x["land_m2"]:,.0f} m²' if x.get("land_m2") else "Superficie no detectada"; x["category"]=x["categoria"].upper()
     shown.sort(key=lambda x:x.get("score",0),reverse=True)
     tabs=[("principal","🔥 Cumple"),("excepciones","⚡ Excepciones"),("negociables","👀 Negociables"),("remates","🔨 Remates"),("todo","📋 Todo"),("cobertura","📡 Cobertura")]
-    return render_template_string(HTML,items=shown,view=view,tabs=tabs,cov=coverage(rows))
+    return render_template_string(HTML,items=shown,view=view,tabs=tabs,cov=coverage(rows),report=LAST_REPORT)
+
+
+@app.post("/actualizar")
+def actualizar():
+    global LAST_REPORT
+    rate=float(cfg.get("moneda",{}).get("usd_bob",7.0))
+    collectors=[
+      ("El Deber",collect_eldeber),("BCP",collect_bcp),("Banco Ganadero",collect_ganadero),
+      ("SIN",collect_sin),("Banco Económico",collect_economico),("InfoCasas",collect_infocasas)
+    ]
+    report=[]
+    for name,collector in collectors:
+        try:
+            found=collector(rate)
+            new=0; changed=0
+            for item in found:
+                result=upsert(item); new+=int(result["created"]); changed+=int(result["price_changed"])
+            report.append(f"✅ {name}: {len(found)} encontrados · {new} nuevos · {changed} cambios de precio")
+        except Exception as exc:
+            report.append(f"⚠️ {name}: {type(exc).__name__}: {str(exc)[:160]}")
+    LAST_REPORT=report
+    return redirect(url_for("home",view="todo"))
