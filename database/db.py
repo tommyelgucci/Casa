@@ -64,7 +64,7 @@ def auction_history(registry):
     with connect() as con:
         rows=con.execute("""SELECT id,source,source_id,title,url,registry,auction_number,
           price,currency,price_usd,price_bob,auction_date,court,ownership_percent,first_seen
-          FROM items WHERE kind='remate' AND registry=?
+          FROM items WHERE kind IN ('remate','adjudicacion') AND registry=?
           ORDER BY COALESCE(auction_number,0), COALESCE(auction_date,first_seen)""",(registry,)).fetchall()
         return [dict(r) for r in rows]
 
