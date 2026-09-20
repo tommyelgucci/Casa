@@ -29,7 +29,15 @@ h1{margin-bottom:4px}.muted{color:#9aa4b2}.tabs{display:flex;gap:8px;overflow:au
 {% if report %}<div class="card"><b>Última actualización</b>{% for r in report %}<p>{{r}}</p>{% endfor %}</div>{% endif %}
 <div class="tabs">{% for key,label in tabs %}<a href="/?view={{key}}">{{label}}</a>{% endfor %}</div>
 {% if view=="cobertura" %}<h2>📡 Cobertura</h2><div class="grid">{% for s in cov %}<div class="card"><b>{{s.name}}</b><p>{{s.mode}}</p><span class="pill">{{s.registros}} registros</span></div>{% endfor %}</div>{% elif view=="config" %}<h2>⚙️ Configuración activa</h2><div class="card"><p>Objetivo: ≥ {{cfg.busqueda.superficie_objetivo_min_m2}} m² · Excepción: ≥ {{cfg.busqueda.superficie_excepcion_min_m2}} m²</p><p>Principal: $us {{cfg.busqueda.precio_max_usd}} o Bs {{cfg.busqueda.precio_max_bob}}</p><p>Negociable: $us {{cfg.busqueda.precio_negociable_usd}} o Bs {{cfg.busqueda.precio_negociable_bob}}</p><p>Tipo de cambio configurado: 1 USD = Bs {{cfg.moneda.usd_bob}} <b>(referencia configurable, no cotización en vivo)</b></p><p>Antigüedad máxima de anuncios normales: {{cfg.busqueda.antiguedad_max_dias}} días</p><p>Copropiedad permitida: {{cfg.remates.permitir_copropiedad}}</p></div>
-{% else %}<p class="muted">{{items|length}} resultados almacenados. Un cero también puede significar que una fuente todavía necesita ajuste técnico.</p><div class="grid">
+{% else %}<p class="muted">{{items|length}} resultados almacenados. Un cero también puede significar que una fuente todavía necesita ajuste técnico.</p>
+<form method="get" class="card" style="margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:end">
+<input type="hidden" name="view" value="{{view}}">
+<label>Precio<br><select name="price_sort" style="padding:8px;border-radius:8px"><option value="">Sin ordenar</option><option value="asc" {% if price_sort=="asc" %}selected{% endif %}>Más barato → más caro</option><option value="desc" {% if price_sort=="desc" %}selected{% endif %}>Más caro → más barato</option></select></label>
+<label>Superficie<br><select name="area_sort" style="padding:8px;border-radius:8px"><option value="">Sin ordenar</option><option value="desc" {% if area_sort=="desc" %}selected{% endif %}>Mayor m² → menor m²</option><option value="asc" {% if area_sort=="asc" %}selected{% endif %}>Menor m² → mayor m²</option></select></label>
+<label>Prioridad<br><select name="priority" style="padding:8px;border-radius:8px"><option value="price" {% if priority=="price" %}selected{% endif %}>Precio primero</option><option value="area" {% if priority=="area" %}selected{% endif %}>Superficie primero</option></select></label>
+<button style="padding:9px 14px;border-radius:8px">Aplicar filtros</button>
+<a href="/?view={{view}}" style="padding:9px">Limpiar</a>
+</form><div class="grid">
 {% for x in items %}<div class="card"><div class="score">🎯 {{x.score}}/100</div><h3>{{x.title or "Propiedad"}}</h3>
 <div class="price">{{x.money}}</div><div class="stats"><span>📐 {{x.area}}</span><span>📍 {{x.zone or "Por revisar"}}</span></div>
 <p><span class="pill">{{x.category}}</span> <span class="pill">{{x.source}}</span></p>
@@ -76,9 +84,29 @@ def home():
         x["price_hist"]=price_history(x["id"])
         x["auction_hist"]=auction_history(x.get("registry")) if x.get("registry") else []
         x["verification"]=verification_status(x["id"]) if x.get("kind") in ("remate","adjudicacion") else ""
-    shown.sort(key=lambda x:x.get("score",0),reverse=True)
+    price_sort=request.args.get("price_sort","")
+    area_sort=request.args.get("area_sort","")
+    priority=request.args.get("priority","price")
+    def sort_value(x, field, direction):
+        value=x.get(field)
+        if value is None:
+            return float("inf") if direction=="asc" else float("-inf")
+        return float(value)
+    criteria=[]
+    if priority=="area":
+        if price_sort: criteria.append(("price_usd",price_sort))
+        if area_sort: criteria.append(("land_m2",area_sort))
+    else:
+        if area_sort: criteria.append(("land_m2",area_sort))
+        if price_sort: criteria.append(("price_usd",price_sort))
+    if criteria:
+        # Stable sorts: apply secondary first, primary last.
+        for field,direction in criteria:
+            shown.sort(key=lambda x,f=field,d=direction:sort_value(x,f,d),reverse=(direction=="desc"))
+    else:
+        shown.sort(key=lambda x:x.get("score",0),reverse=True)
     tabs=[("principal","🔥 Cumple"),("excepciones","⚡ Excepciones"),("negociables","👀 Negociables"),("remates","🔨 Remates"),("favoritos","❤️ Guardados"),("vigilar","👀 Vigilar"),("todo","📋 Todo"),("cobertura","📡 Cobertura"),("config","⚙️ Configuración")]
-    return render_template_string(HTML,items=shown,view=view,tabs=tabs,cov=coverage(rows),report=LAST_REPORT,cfg=cfg)
+    return render_template_string(HTML,items=shown,view=view,tabs=tabs,cov=coverage(rows),report=LAST_REPORT,cfg=cfg,price_sort=price_sort,area_sort=area_sort,priority=priority)
 
 
 @app.post("/actualizar")
