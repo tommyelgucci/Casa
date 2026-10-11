@@ -8,11 +8,56 @@ busqueda:
   precio_negociable_bob: 250000
   antiguedad_max_dias: 90
 zonas:
-  incluir: [santa_cruz_de_la_sierra, urubo, porongo, warnes]
+  incluir:
+    - santa_cruz_de_la_sierra
+    - doble_via_a_la_guardia
+    - radial_17_1_2
+    - avenida_grigota
+    - zona_sur
+    - ventura_mall_sur
+    - el_bajio
+    - uv_127
+    - uv_128
+    - uv_120
+    - uv_121
+    - uv_110
+    - uv_111
+    - uv_52
+    - uv_51
+    - uv_109
+    - uv_119
+    - uv_126
+    - uv_125
+    - uv_118
+    - uv_108
+    - uv_112
+    - urubo
+    - porongo
+    - warnes
   prioridad:
-    equipetrol: 10
-    av_beni: 9
-    av_banzer: 9
+    uv_127: 10
+    uv_128: 10
+    uv_120: 10
+    uv_121: 10
+    uv_110: 10
+    uv_111: 10
+    uv_52: 10
+    uv_51: 10
+    uv_109: 10
+    uv_119: 10
+    uv_126: 10
+    uv_125: 10
+    uv_118: 10
+    uv_108: 10
+    uv_112: 10
+    doble_via_a_la_guardia: 10
+    ventura_mall_sur: 10
+    radial_17_1_2: 10
+    avenida_grigota: 9
+    av_grigota: 9
+    el_bajio: 9
+    zona_sur: 9
+    santa_cruz_de_la_sierra: 8
     zona_norte: 8
     urubo: 8
     porongo: 6
